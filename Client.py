@@ -18,10 +18,11 @@ while seq_num < len(data):
     print('Sent packet:', seq_num)
     UDPClientSocket.settimeout(1.0)
     try:
-        seq_num += 1
+        ack,addr = UDPClientSocket.recvfrom(bufferSize)
+        ack_num = int(ack.decode())
+        print(str(ack_num))
+        if ack_num == seq_num:
+            seq_num += 1
     except socket.timeout:
         print('Timeout occurred, retransmitting packet:', seq_num)
-msgFromServer = UDPClientSocket.recvfrom(bufferSize)
-msg = "Message from Server {}".format(msgFromServer[0])
-print(msg)
 UDPClientSocket.close()

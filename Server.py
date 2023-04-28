@@ -1,5 +1,5 @@
 import socket
-
+import time
 localIP = "127.0.0.1"
 
 localPort = 20001
@@ -18,13 +18,15 @@ expected_seq_num = 0
 print("UDP server up and listening")
 # Listen for incoming datagrams
 while (True):
-    data = UDPServerSocket.recvfrom(bufferSize)
-    addr = data[1]
-    packet = data[0].decode().split('|')
+    data,addr = UDPServerSocket.recvfrom(bufferSize)
+    packet = data.decode().split('|')
     seq_num = int(packet[0])
     if seq_num == expected_seq_num:
         ack = str(seq_num)
         UDPServerSocket.sendto(ack.encode(), addr)
-        print('Received packet:', packet[1])
+        print('Received packet:', packet[1].encode("utf-8"))
         expected_seq_num += 1
-UDPServerSocket.close()
+    else:
+        print('Received duplicate packet:', seq_num)
+    time.sleep(1.2)
+    
