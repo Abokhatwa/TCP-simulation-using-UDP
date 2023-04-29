@@ -18,7 +18,6 @@ UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 expected_seq_num = 0
 print("UDP server up and listening")
-flag = 0
 # Listen for incoming datagrams
 while (True):
     data,addr = UDPServerSocket.recvfrom(bufferSize)
