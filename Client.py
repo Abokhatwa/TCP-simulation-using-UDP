@@ -14,7 +14,7 @@ bufferSize = 1024
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 seq_num = 0
 while seq_num < len(data):
-    checksum = zlib.crc32(data[seq_num])
+    checksum = zlib.crc32(data[seq_num].encode())
     packet = str(seq_num) + '|'+ str(checksum) + '|' + data[seq_num]
     if random.random() > 0.1:
         UDPClientSocket.sendto(packet.encode(), serverAddressPort)

@@ -24,7 +24,7 @@ while (True):
     packet = data.decode().split('|')
     seq_num = int(packet[0])
     checksum = packet[1]
-    original_checksum = zlib.crc32(packet[2])
+    original_checksum = zlib.crc32(packet[2].encode())
     if int(checksum)==original_checksum:
         if seq_num == expected_seq_num:
             ack = str(seq_num)
