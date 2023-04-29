@@ -1,5 +1,6 @@
 import socket
-
+import random
+import zlib
 data = []
 data.append("Saeed")
 data.append("Hossam")
@@ -13,8 +14,13 @@ bufferSize = 1024
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 seq_num = 0
 while seq_num < len(data):
-    packet = str(seq_num) + '|' + data[seq_num]
-    UDPClientSocket.sendto(packet.encode(), serverAddressPort)
+    checksum = zlib.crc32(data[seq_num])
+    packet = str(seq_num) + '|'+ str(checksum) + '|' + data[seq_num]
+    if random.random() > 0.1:
+        UDPClientSocket.sendto(packet.encode(), serverAddressPort)
+        print("Packet sent")
+    else:
+        print("Packet lost")
     print('Sent packet:', seq_num)
     UDPClientSocket.settimeout(1.0)
     try:
