@@ -2,6 +2,7 @@ import socket
 import random
 import zlib
 import struct
+from utilities import *
 
 #TCP header
 # Fields:
@@ -23,14 +24,6 @@ import struct
 # Urgent pointer(unsigned short): these 16 bits are used when the URG bit has been set, the urgent pointer is used to indicate where the urgent data ends.
 # Options(not implemented): this field is optional and can be anywhere between 0 and 320 bits.
 
-
-
-
-
-
-
-
-
 data = []
 data.append("Saeed")
 data.append("Hossam")
@@ -46,55 +39,33 @@ UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.bind(clientAddressPort)
 
 seq_num = 0
-
-
-
-
-
 while seq_num < len(data):
-    checksum = zlib.crc32(data[seq_num].encode())
-    packet = str(seq_num) + '|'+ str(checksum) + '|' + data[seq_num]
-    if random.random() > 0:
-
-        Source_port=("127.0.0.1", 20023)
-        Destination_port=("127.0.0.1", 20001)
-
-        Source_port_t=b'127.0.0.1:20023'
-        Destination_port_t=b'127.0.0.1:20001'
-
-        Sequence_number=0
-        data="hossam"
-        Acknowledgment_number=0+len(data)
-
-        Flags=b'0101000000000000'
         
-        bufferSize = 1024
-        checksum = zlib.crc32(data.encode())
+    Source_port=clientAddressPort[1]
+    Destination_port=serverAddressPort[1]
 
-        Window=bufferSize
-        Check_sum=checksum
-        Urgent_pointer=0
+    Sequence_number=seq_num
+    data_t=data[seq_num]
+    Acknowledgment_number=0+len(data_t)
 
-        
-        TCP_Header=struct.pack(f"2s 2s 2I 4H {len(data)}s",Source_port_t,Destination_port_t
-                            ,Sequence_number,Acknowledgment_number,
-                            int.from_bytes(Flags, byteorder='big'),Window,Check_sum,Urgent_pointer,data)
+    Flags=20480 #"0101000000000000"
+    Window=1024
+    Urgent_pointer=0
 
-
-
-        UDPClientSocket.sendto(TCP_Header, serverAddressPort)
-        print("Packet sent")
-    else:
-        print("Packet lost")
-        
+    Tcp_send(data_t,Sequence_number,Acknowledgment_number,Flags
+             ,Window,Urgent_pointer,UDPClientSocket,serverAddressPort,src_addr=clientAddressPort) 
+    
     print('Sent packet:', seq_num)
     UDPClientSocket.settimeout(1.0)
+
     try:
-        ack,addr = UDPClientSocket.recvfrom(bufferSize)
+        ack,addr = UDPClientSocket.recvfrom(Window)
         ack_num = int(ack.decode())
         print(str(ack_num))
         if ack_num == seq_num:
             seq_num += 1
     except socket.timeout:
         print('Timeout occurred, retransmitting packet:', seq_num)
+
+
 UDPClientSocket.close()
