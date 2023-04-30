@@ -38,13 +38,13 @@ three_way_flag = 0
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.bind(clientAddressPort)
 
-seq_num = 0
+datapointer = 0
 while three_way_flag==0:
     UDPClientSocket.settimeout(2.0)
     flags = 20482
     Source_port=clientAddressPort[1]
     Destination_port=serverAddressPort[1]
-    Sequence_number=seq_num
+    Sequence_number=datapointer
     data_t=""
     Acknowledgment_number=0
     Window=1024
@@ -65,19 +65,18 @@ while three_way_flag==0:
     if flags==20498:
         flags = 20496
         print("SYN-ACK received,Sending ACK")
-        Tcp_send(data_t,seq_num,sequence_number+1,flags
+        Tcp_send(data_t,datapointer,sequence_number+1,flags
              ,Window,Urgent_pointer,UDPClientSocket,serverAddressPort,src_addr=clientAddressPort)
         three_way_flag=1
     print({"---------------------------------------------------------------"})
     time.sleep(1.5)
-while seq_num < len(data):
-        
+Sequence_number=1
+while datapointer < len(data):
     Source_port=clientAddressPort[1]
     Destination_port=serverAddressPort[1]
 
-    Sequence_number=seq_num
-    data_t=data[seq_num]
-    Acknowledgment_number=0+len(data_t)
+    data_t=data[datapointer]
+    Acknowledgment_number=1
 
     Flags=20480 #"0101000000000000"
     Window=1024
@@ -86,17 +85,17 @@ while seq_num < len(data):
     Tcp_send(data_t,Sequence_number,Acknowledgment_number,Flags
              ,Window,Urgent_pointer,UDPClientSocket,serverAddressPort,src_addr=clientAddressPort) 
     
-    print('Sent packet:', seq_num)
+    print('Sent packet:', Sequence_number)
     UDPClientSocket.settimeout(1.0)
-
     try:
         ack,addr = UDPClientSocket.recvfrom(Window)
         ack_num = int(ack.decode())
-        print(str(ack_num))
-        if ack_num == seq_num:
-            seq_num += 1
+        print("Received ACK: ",str(ack_num))
+        if ack_num == Sequence_number+len(data[datapointer]):
+            datapointer += 1
+            Sequence_number = ack_num
     except socket.timeout:
-        print('Timeout occurred, retransmitting packet:', seq_num)
+        print('Timeout occurred, retransmitting packet:', Sequence_number)
 
 
 UDPClientSocket.close()
