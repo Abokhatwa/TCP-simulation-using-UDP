@@ -108,7 +108,7 @@ def tcp_recv(window_size,UDPServerSocket):
     print("UDP server up and listening")
     # Listen for incoming datagrams
     serverSeqnumber = 0
-    expected_seq_num = 0
+    expected_seq_num = 1
     three_way_flag=0
     print("Waiting for connection.....")
     while True:
@@ -158,15 +158,17 @@ def tcp_recv(window_size,UDPServerSocket):
             
             verify = verify_checksum(pseudo_header + TCP_header + payload, check_sum)
             if verify == 0xFFFF:
-                if sequence_number == expected_seq_num:
-                    ack = str(sequence_number)
+                if int(sequence_number) == int(expected_seq_num):
+                    ack = sequence_number+size_of_payload
+                    ack = str(ack)
                     clientAddressPort=src_addr
                     UDPServerSocket.sendto(ack.encode(), clientAddressPort)
                     print('Received packet:', payload)
-                    expected_seq_num += 1
+                    expected_seq_num = ack
                 else:
                     print('Received duplicate packet:', sequence_number)
             else:
                 print("Message corrupted,waiting for a retransmission")
+            time.sleep(1.2)
             if random.random() < 0.3:
                 time.sleep(1.2)
