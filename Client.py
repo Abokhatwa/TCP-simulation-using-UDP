@@ -31,7 +31,7 @@ data.append("Ehab")
 
 clientAddressPort=("127.0.0.1", 20023)
 serverAddressPort = ("127.0.0.1", 20001)
-
+three_way_flag = 0
 
 # Create a UDP socket at client side
 
@@ -39,6 +39,37 @@ UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.bind(clientAddressPort)
 
 seq_num = 0
+while three_way_flag==0:
+    UDPClientSocket.settimeout(2.0)
+    flags = 20482
+    Source_port=clientAddressPort[1]
+    Destination_port=serverAddressPort[1]
+    Sequence_number=seq_num
+    data_t=""
+    Acknowledgment_number=0
+    Window=1024
+    Urgent_pointer=0
+    Tcp_send(data_t,Sequence_number,Acknowledgment_number,flags
+             ,Window,Urgent_pointer,UDPClientSocket,serverAddressPort,src_addr=clientAddressPort)
+    print("SYN SENT,Waiting for an SYN-ACK")
+    time.sleep(1.2)
+    try:
+        synack,addr = UDPClientSocket.recvfrom(Window)
+    except socket.timeout:
+        print("Couldn't connect to the server, Retrying to connect!")
+        continue
+    size_of_payload=len(synack)-20
+    unpacked_data=struct.unpack(f"2H 2I 4H {size_of_payload}s",synack)
+    flags = unpacked_data[4]
+    sequence_number = unpacked_data[2]
+    if flags==20498:
+        flags = 20496
+        print("SYN-ACK received,Sending ACK")
+        Tcp_send(data_t,seq_num,sequence_number+1,flags
+             ,Window,Urgent_pointer,UDPClientSocket,serverAddressPort,src_addr=clientAddressPort)
+        three_way_flag=1
+    print({"---------------------------------------------------------------"})
+    time.sleep(1.5)
 while seq_num < len(data):
         
     Source_port=clientAddressPort[1]
