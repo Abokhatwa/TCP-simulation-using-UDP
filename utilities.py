@@ -68,7 +68,6 @@ def Tcp_send(data,Sequence_number,Acknowledgment_number,Flags,Window,Urgent_poin
     checksum = 0
     pseudo_header = struct.pack('!BBH', Reserved, protocol, tcp_length)
 
-    print(f"pseudo_header {pseudo_header}")
     pseudo_header = src_ip + dest_ip + pseudo_header
  
 
@@ -77,9 +76,13 @@ def Tcp_send(data,Sequence_number,Acknowledgment_number,Flags,Window,Urgent_poin
                 Flags,Window,checksum,Urgent_pointer)
 
 
+    #cpy=pseudo_header + TCP_header + data
 
     checksum = checksum_func(pseudo_header + TCP_header + data)
-    print(f'check sum in sending is {checksum}')
+
+    #test=verify_checksum(cpy,checksum)
+
+    #print(hex(test))
 
     TCP_header=struct.pack("2H 2I 4H",src_port,dest_port
                 ,Sequence_number,Acknowledgment_number,
@@ -131,19 +134,21 @@ def tcp_recv(window_size,UDPServerSocket):
         src_ip = struct.pack('!4B', *src_ip)
         dest_ip = struct.pack('!4B', *dest_ip)
 
-        pseudo_header = struct.pack('!BBH 2H 2I 4H', Reserved, protocol, len(data),
-                                     source_port, destination_port,
-                                     sequence_number,acknowledgment_number,
-                                    flags,window,0,urgent_pointer)
+
+        pseudo_header = struct.pack('!BBH', Reserved, protocol, len(data))
+        pseudo_header = src_ip + dest_ip + pseudo_header
+
+        TCP_header=struct.pack(f"2H 2I 4H",source_port,destination_port
+                ,sequence_number,acknowledgment_number,
+                flags,window,0,urgent_pointer)
         
-        verify = verify_checksum(src_ip+dest_ip+ pseudo_header + payload, check_sum)
-        print(verify)
+        verify = verify_checksum(pseudo_header + TCP_header + payload, check_sum)
         if verify == 0xFFFF:
             if sequence_number == expected_seq_num:
                 ack = str(sequence_number)
                 clientAddressPort=src_addr
                 UDPServerSocket.sendto(ack.encode(), clientAddressPort)
-                print('Received packet:', payload.encode("utf-8"))
+                print('Received packet:', payload)
                 expected_seq_num += 1
             else:
                 print('Received duplicate packet:', sequence_number)
