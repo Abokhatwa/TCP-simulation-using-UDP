@@ -209,7 +209,7 @@ def tcp_recv(window_size,UDPServerSocket):
                     with open(filename, 'r') as f:
                         lines = f.readlines()
                         sendmsg = lines
-                    print(lines)
+
             if postflag==1:
                 if flags == 20481:
                     serverFlags=29496
@@ -292,7 +292,7 @@ def tcp_recv(window_size,UDPServerSocket):
                     break
 
 
-
-    with open(filename, 'w') as f:
-        f.writelines("%s\n" % item for item in msg)     
+    if flag_get==0:            
+        with open(filename, 'w') as f:
+            f.writelines("%s\n" % item for item in msg)     
         
