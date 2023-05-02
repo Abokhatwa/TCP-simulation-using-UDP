@@ -53,7 +53,6 @@ data = []
 data.append("Saeed")
 data.append("Hossam")
 data.append("Ehab")
-data.append("zasd")
 datapointer = 0
 postflag = 0
 getflag = 0
