@@ -23,7 +23,7 @@ This will result in getting all the text from filename.txt by the server side an
 
 ## Another Example
 ```python
-post /filename.txt
+POST /filename.txt
 ```
 this will result in sending the text for a buffer in the client side to the server side and saving it in a filename.txt (if filename.txt doesn't exist it will be automatically created).
 You can add those text in the buffer by appending to a variable called data
