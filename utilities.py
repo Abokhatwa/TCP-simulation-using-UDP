@@ -2,6 +2,7 @@ import socket
 import random
 import struct
 import time
+import os
 
 
 def ip2int(ip_addr):
@@ -99,21 +100,23 @@ def Tcp_send(data,Sequence_number,Acknowledgment_number,Flags,Window,Urgent_poin
     #print('Sent packet:', Sequence_number)
 
 
-    
+
 
 def tcp_recv(window_size,UDPServerSocket):
     Reserved = 0
     protocol = socket.IPPROTO_TCP
-
     print("UDP server up and listening")
     # Listen for incoming datagrams
     serverSeqnumber = 0
     expected_seq_num = 1
     three_way_flag=0
     print("Waiting for connection.....")
-    while True:
+    flag_get=0
+    postflag = 0
+    msg=[]
+    sendmsg = []
+    while True:        
         data, src_addr = UDPServerSocket.recvfrom(window_size)
-        
         size_of_payload=len(data)-20
         unpacked_data=struct.unpack(f"2H 2I 4H {size_of_payload}s",data)
 
@@ -142,33 +145,154 @@ def tcp_recv(window_size,UDPServerSocket):
                     print({"---------------------------------------------------------------"})
 
         else:
-            src_ip=ip2int(src_addr[0])
-            dest_ip=ip2int(UDPServerSocket.getsockname()[0])
-            
-            src_ip = struct.pack('!4B', *src_ip)
-            dest_ip = struct.pack('!4B', *dest_ip)
+            if sequence_number==0 and acknowledgment_number==0 and flags==20480:
+                response = "HTTP/1.1 200 OK"
+                Tcp_send(response,0,0,flags
+                ,window,urgent_pointer,UDPServerSocket,src_addr,src_addr=UDPServerSocket.getsockname())
 
 
-            pseudo_header = struct.pack('!BBH', Reserved, protocol, len(data))
-            pseudo_header = src_ip + dest_ip + pseudo_header
+                httpHeader=payload
+                httpHeader=httpHeader.decode("UTF-8")
+                # Split the request into lines
+                request_lines = httpHeader.split("\r\n")
+                # Get the first line, which contains the command
+                command_line = request_lines[0]
+                # Split the command line into its parts
+                command_parts = command_line.split(" ")
+                # Get the HTTP method (GET or POST) from the command
 
-            TCP_header=struct.pack(f"2H 2I 4H",source_port,destination_port
-                    ,sequence_number,acknowledgment_number,
-                    flags,window,0,urgent_pointer)
-            
-            verify = verify_checksum(pseudo_header + TCP_header + payload, check_sum)
-            if verify == 0xFFFF:
-                if int(sequence_number) == int(expected_seq_num):
-                    ack = sequence_number+size_of_payload
-                    ack = str(ack)
-                    clientAddressPort=src_addr
-                    UDPServerSocket.sendto(ack.encode(), clientAddressPort)
-                    print('Received packet:', payload)
-                    expected_seq_num = ack
+
+                # Define the directory to search in
+                current_directory = os.getcwd()
+                dir_path = current_directory
+
+                # Define the filename to search for
+                filename = str(command_parts[1])[1:]
+                postflag=1
+            elif sequence_number==0 and acknowledgment_number==1 and flags==20480:
+                httpHeader=payload
+                httpHeader=httpHeader.decode("UTF-8")
+                # Split the request into lines
+                request_lines = httpHeader.split("\r\n")
+                # Get the first line, which contains the command
+                command_line = request_lines[0]
+                # Split the command line into its parts
+                command_parts = command_line.split(" ")
+                # Get the HTTP method (GET or POST) from the command
+
+
+                # Define the directory to search in
+                current_directory = os.getcwd()
+                dir_path = current_directory
+
+                # Define the filename to search for
+                filename = str(command_parts[1])[1:]
+
+                # Iterate over the files in the directory
+                for root, dirs, files in os.walk(dir_path):
+                    if filename in files:
+                        # Found the file
+                        print(f'File {filename} found in {root}')
+                        response = "HTTP/1.1 200 OK"
+                        flag_get=1
+                        break
                 else:
-                    print('Received duplicate packet:', sequence_number)
-            else:
-                print("Message corrupted,waiting for a retransmission")
-            time.sleep(1.2)
-            if random.random() < 0.3:
+                    # File not found
+                    print(f'File {filename} not found in {dir_path}')
+                    response = "HTTP/1.1 404 Not Found"
+
+                Tcp_send(response,0,0,flags
+                ,window,urgent_pointer,UDPServerSocket,
+                src_addr,src_addr=UDPServerSocket.getsockname())
+
+                if flag_get==1:
+                    with open(filename, 'r') as f:
+                        lines = f.readlines()
+                        sendmsg = lines
+                    print(lines)
+            if postflag==1:
+                if flags == 20481:
+                    serverFlags=29496
+                    Tcp_send("",serverSeqnumber,sequence_number+1,serverFlags
+                    ,window,urgent_pointer,UDPServerSocket,src_addr,src_addr=UDPServerSocket.getsockname())
+                    break
+                src_ip=ip2int(src_addr[0])
+                dest_ip=ip2int(UDPServerSocket.getsockname()[0])
+                src_ip = struct.pack('!4B', *src_ip)
+                dest_ip = struct.pack('!4B', *dest_ip)
+
+
+                pseudo_header = struct.pack('!BBH', Reserved, protocol, len(data))
+                pseudo_header = src_ip + dest_ip + pseudo_header
+
+                TCP_header=struct.pack(f"2H 2I 4H",source_port,destination_port
+                        ,sequence_number,acknowledgment_number,
+                        flags,window,0,urgent_pointer)
+                
+                verify = verify_checksum(pseudo_header + TCP_header + payload, check_sum)
+                if verify == 0xFFFF:
+                    if int(sequence_number) == int(expected_seq_num):
+
+                        #save packets into textfile
+                        msg.append(payload.decode("UTF-8"))
+
+                        ack = sequence_number+size_of_payload
+                        ack = str(ack)
+                        clientAddressPort=src_addr
+                        UDPServerSocket.sendto(ack.encode(), clientAddressPort)
+                        print('Received packet:', payload)
+                        expected_seq_num = ack
+                    else:
+                        print('Received duplicate packet:', sequence_number)
+                else:
+                    print("Message corrupted,waiting for a retransmission")
                 time.sleep(1.2)
+                if random.random() < 0.3:
+                    time.sleep(1.2)
+            else:
+                Sequence_number=1
+                datapointer = 0
+                while datapointer < len(sendmsg):
+                    data_t=sendmsg[datapointer]
+                    Acknowledgment_number=1
+
+                    Flags=20480 #"0101000000000000"
+                    Window=1024
+                    Urgent_pointer=0
+
+                    Tcp_send(data_t,Sequence_number,Acknowledgment_number,Flags
+                                ,Window,Urgent_pointer,UDPServerSocket,src_addr,src_addr=UDPServerSocket.getsockname()) 
+
+                    print('Sent packet:', Sequence_number)
+                    UDPServerSocket.settimeout(1.0)
+                    try:
+                        ack,addr = UDPServerSocket.recvfrom(Window)
+                        ack_num = int(ack.decode())
+                        print("Received ACK: ",str(ack_num))
+                        if ack_num == Sequence_number+len(sendmsg[datapointer]):
+                            datapointer += 1
+                            Sequence_number = ack_num
+                    except socket.timeout:
+                        print('Timeout occurred, retransmitting packet:', Sequence_number)
+                UDPServerSocket.settimeout(None)
+                flags = 20481
+                Sequence_number=0
+                data_t=""
+                Acknowledgment_number=0
+                Window=1024
+                Urgent_pointer=0
+                Tcp_send(data_t,Sequence_number,Acknowledgment_number,flags
+                            ,Window,Urgent_pointer,UDPServerSocket,src_addr,src_addr=UDPServerSocket.getsockname())
+                fin,addr = UDPServerSocket.recvfrom(Window)
+                size_of_payload=len(fin)-20
+                unpacked_data=struct.unpack(f"2H 2I 4H {size_of_payload}s",fin)
+                flags = unpacked_data[4]
+                if flags == 29496:
+                    UDPServerSocket.close()
+                    break
+
+
+
+    with open(filename, 'w') as f:
+        f.writelines("%s\n" % item for item in msg)     
+        
